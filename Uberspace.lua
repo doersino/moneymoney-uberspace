@@ -4,7 +4,11 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 --]]
 
-WebBanking{version = 1.03,
+-- https://github.com/doersino/moneymoney-uberspace/blob/main/Uberspace.lua
+-- For email login only, queries all asteroids under the same Uberspace account.
+-- Based on: https://github.com/hatobi/moneymoney-uberspace
+
+WebBanking{version = 1.04,
            url = 'https://dashboard.uberspace.de/login',
            services = {'Uberspace.de'},
            description = string.format(
@@ -17,27 +21,13 @@ function SupportsBank (protocol, bankCode)
 end
 
 local usConnection = Connection()
-local usUsername
 
 function InitializeSession (protocol, bankCode, username, username2,
                             password, username3)
-  
-  -- Check if the username contains '|'
-  local splitPos = username:find("|")
-  
-  if splitPos then
-    -- If `|` is found, split into email and username
-    usLogin = username:sub(1, splitPos - 1)
-    usUsername = username:sub(splitPos + 1)
-  else
-    -- If no `|` is found, use the entire value as both login and username
-    usLogin = username
-    usUsername = username
-  end
 
   -- Login.
   html = HTML(usConnection:get('https://dashboard.uberspace.de/login'))
-  html:xpath('//input[@name="login"]'):attr('value', usLogin)
+  html:xpath('//input[@name="login"]'):attr('value', username)
   html:xpath('//input[@name="password"]'):attr('value', password)
 
   html = HTML(
@@ -49,15 +39,29 @@ function InitializeSession (protocol, bankCode, username, username2,
 end
 
 function ListAccounts (knownAccounts)
+
+  -- Download asteroids/accounts overview page.
+  local metaUrl = 'https://dashboard.uberspace.de/meta'
+  html = HTML(usConnection:get(metaUrl))
+  tableRows = html:xpath('//*[@id="dotqmailtable"]//tr[position()>1]')  -- Skip head row.
+  print('Found ' .. tableRows:length() .. ' rows')
+  print(tableRows)
+
+  -- Build up array of accounts.
+  local accounts = {}
+  for i = 1, tableRows:length() do
+    local asteroid = tableRows:get(i):children():get(1):text()
+    table.insert(accounts, {
+      name = 'Uberspace "' .. asteroid  .. '"',
+      accountNumber = asteroid,
+      portfolio = false,
+      currency = 'EUR',
+      type = AccountTypeSavings
+    })
+  end
+
   -- Return array of accounts.
-  local account = {
-    name = 'Uberspace ' .. usUsername,
-    accountNumber = '1',
-    portfolio = false,
-    currency = 'EUR',
-    type = AccountTypeSavings
-  }
-  return {account}
+  return accounts
 end
 
 function RefreshAccount (account, since)
@@ -78,12 +82,9 @@ function RefreshAccount (account, since)
     end
   end
 
-  -- Adjust accounting URL to include the specific username
-  local accountingUrl = 'https://dashboard.uberspace.de/dashboard/accounting?asteroid=' .. usUsername
+  -- Adjust accounting URL to include the specific asteroid.
+  local accountingUrl = 'https://dashboard.uberspace.de/dashboard/accounting?show_all_transactions=1&asteroid=' .. account.accountNumber
   html = HTML(usConnection:get(accountingUrl))
-  --[[ html = HTML(usConnection:get(
-                'https://dashboard.uberspace.de/dashboard/accounting'))
-                --]]
   tableRows = html:xpath(
     '//*[@id="transactions"]//tr[count(td)=3][position()<last()]')
   print('Found ' .. tableRows:length() .. ' rows')
@@ -97,16 +98,21 @@ function RefreshAccount (account, since)
     local day, month, year = children:get(1):text():match(pattern)
     local bookingDate = os.time{day=day, month=month, year=year}
 
-    if bookingDate < since then
-      print('Stopping parsing because transaction is too old.')
-      print('Date of transaction: ' .. os.date('%c', bookingDate))
-      print('since: ' .. os.date('%c', since))
-      break
-    end
+    -- Download all transactions (otherwise only the last 12 months on initial import; MoneyMoney will dedup anyway).
+    --if bookingDate < since then
+    --  print('Stopping parsing because transaction is too old.')
+    --  print('Date of transaction: ' .. os.date('%c', bookingDate))
+    --  print('since: ' .. os.date('%c', since))
+    --  break
+    --end
+
+    local purpose = children:get(2):text()
 
     local amount = ParseAmount(children:get(3):text())
+
     table.insert(transactions, {
                    bookingDate = bookingDate,
+                   purpose = purpose,
                    amount = amount
     })
   end
