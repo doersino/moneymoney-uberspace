@@ -5,7 +5,7 @@
 --]]
 
 -- https://github.com/doersino/moneymoney-uberspace/blob/main/Uberspace.lua
--- For email login only, queries all asteroids under the same Uberspace account.
+-- For email login only, queries all Asteroids under the same Uberspace account.
 -- Based on: https://github.com/hatobi/moneymoney-uberspace
 
 WebBanking{version = 1.04,
@@ -82,7 +82,7 @@ function RefreshAccount (account, since)
     end
   end
 
-  -- Adjust accounting URL to include the specific asteroid.
+  -- Adjust accounting URL to include the specific Asteroid.
   local accountingUrl = 'https://dashboard.uberspace.de/dashboard/accounting?show_all_transactions=1&asteroid=' .. account.accountNumber
   html = HTML(usConnection:get(accountingUrl))
   tableRows = html:xpath(
