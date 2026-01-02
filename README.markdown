@@ -4,7 +4,7 @@ This extension for [MoneyMoney](https://moneymoney-app.com/) retrieves the balan
 
 ## Login
 
-Email-based login only: After entering your credentials, MoneyMoney will fetch data for all Uberspaces/Asteroids associated with that email address. It's also not limited to the last 12 months only, instead downloading all transactions when setting up.
+Email-based login only: After entering your credentials, MoneyMoney will fetch data for all Uberspaces/Asteroids associated with that email address. If you add a new Asteroid, MoneyMoney should pick it up via the "Look for New Accounts..." option. What's more, this extension isn't limited to the last 12 months, instead downloading all transactions when setting up.
 
 This extension is a fork of [hatobi's fork](https://github.com/hatobi/moneymoney-uberspace) (which supports email-based login, but still mandates you to specify Asteroid(s) manually) of [puppe's original extension](https://github.com/puppe/moneymoney-uberspace) (now outdated).
 
